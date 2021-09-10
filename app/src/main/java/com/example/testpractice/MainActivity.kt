@@ -3,19 +3,21 @@ package com.example.testpractice
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
-import android.util.Log.DEBUG
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.*
-import kotlin.time.measureTime
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var text : TextView
     private lateinit var progressBar : ProgressBar
     private lateinit var button01: Button
+    private lateinit var button02: Button
+    private lateinit var cancelButton: Button
+
+    private var job01 : Job? = null
+    private var space01 = CoroutineScope(Dispatchers.Default)
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,27 +36,44 @@ class MainActivity : AppCompatActivity() {
         }
 
         // クリックイベント
-        button01 = findViewById<Button>(R.id.mainButton01)
+        button01 = findViewById<Button>(R.id.mainDoAsyncButton01)
         button01.setOnClickListener {
-            CoroutineScope(Dispatchers.Default).launch {
-                progressTest()
+            job01 = space01.launch {
+                    progressTestCoroutine()
             }
+        }
+
+        cancelButton = findViewById<Button>(R.id.mainCancelAsyncButton)
+        cancelButton.setOnClickListener {
+//                space01.cancel()
+            job01?.cancel()
+
+            button01.isEnabled = true
+            text.text = "キャンセルされました"
+            progressBar.progress = 0
         }
     }
 
 
-    private suspend fun progressTest() {
-        withContext(Dispatchers.Main) {
-            button01.isEnabled = false
-        }
-        for (loop_i in 1..100) {
+    private suspend fun progressTestCoroutine() {
+        try {
             withContext(Dispatchers.Main) {
-                progressBar.progress = loop_i
+                button01.isEnabled = false
+                text.text = "開始！"
             }
-            Thread.sleep(25)
-        }
-        withContext(Dispatchers.Main) {
-            button01.isEnabled = true
+            for (loop_i in 1..100) {
+                withContext(Dispatchers.Main) {
+                    progressBar.progress = loop_i
+                }
+                Thread.sleep(50)
+            }
+            withContext(Dispatchers.Main) {
+                button01.isEnabled = true
+                text.text = "終了！"
+            }
+        } catch (e : CancellationException) {
+            Log.e(localClassName, "ここにキャンセル時の処理を記述", e)
+
         }
     }
 } // end class
